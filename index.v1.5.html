@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarma Cabañas Tuzzi</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 450px;
+            color: #1989a8;
+
+
+
+            position: absolute; /* Esto permite la superposición */
+            z-index: 1; /* Asegura que el texto esté por encima */
+        }
+
+        .welcome-message {
+            font-size: 1.2em;
+            margin-bottom: 350px;
+            color: #cccccc;
+
+            position: absolute; /* Esto permite la superposición */
+            z-index: 1; /* Asegura que el texto esté por encima */
+        }
+
+  .button-container {
+    margin-bottom: 0px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Estilo adicional para el contenedor */
+    border: 0px solid #444;
+    border-radius: 10px; /* 10px; */
+    padding: 20px; /* Aumenta el padding */
+    background-color: #000000;
+    width: 400px; /* Ajusta el ancho según sea necesario */
+    height: 400px; /* Ajusta la altura según sea necesario */
+    font-size: 18px; /* Aumenta el tamaño de la fuente */
+    
+
+
+    background-size: cover; /* Ajusta la imagen para cubrir todo el contenedor */
+    background-position: center; /* Centra la imagen */
+    opacity: 0.65; /* Ajusta el valor para la transparencia */
+    position: relative; /* Necesario para la superposición */
+}
+
+
+
+  .button-container button {
+    background-color: #ffffff; /* Mantiene el color original */
+    border: none;
+    padding: 0; /* Ajusta el padding si es necesario */
+    width: 130px; /* Ancho igual a la altura */
+    height: 130px; /* Altura igual al ancho */
+    border-radius: 50%; /* Hacer el botón redondo */
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    /*box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);*/
+    box-shadow: 0 0 25px rgba(100, 100, 100, 0.2);
+    /*opacity: 1.00; /* Ajusta el valor para la transparencia */
+}
+
+
+        .button-container button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            background-color: #555;
+        }
+
+        .button-container img {
+            width: 75px;
+            height: 75px;
+        }
+
+        .status-text {
+            font-size: 1em;
+            top: 450px; /* Cambia este valor para bajar el texto */
+
+            position: absolute; /* Esto permite la superposición */
+            z-index: 1; /* Asegura que el texto esté por encima */
+        }
+
+        .button-container.active button {
+            background-color: #000000;
+           box-shadow: 0 0 20px 10px rgba(25, 137, 168, 0.5);
+        }
+
+        .button-container.alert button {
+            background-color: #000000;
+            box-shadow: 0 0 20px 10px rgba(255, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Alarma Cabañas Tuzzi</h1>
+    <p class="welcome-message">Bienvenido, <span id="username-display">Invitado</span>!</p>
+
+    <div class="button-container" id="alarmButtonContainer">
+        <div class="button-wrapper"> <!-- Nuevo contenedor para el botón -->
+            <button id="alarmButton" onclick="toggleAlarm()">
+                <img src="Button/off.png" alt="Alarma" id="alarmImage">
+            </button>
+        </div>
+    </div>
+
+    <p class="status-text" id="statusText">Desactivada</p>
+
+    <script>
+        // Mostrar el nombre de usuario desde localStorage
+        const username = localStorage.getItem("username");
+        if (username) {
+            document.getElementById("username-display").textContent = username;
+        }
+
+        // Conectar al broker MQTT con autenticación
+        const client = mqtt.connect('ws://mqttsas2024.ddns.net:9001');
+
+        client.on('connect', function () {
+            console.log('Conectado al broker MQTT');
+            client.subscribe('estado/alarma', function (err) {
+                if (!err) console.log('Suscrito al topic estado/alarma');
+            });
+            client.subscribe('alerta/alarma', function (err) {
+                if (!err) console.log('Suscrito al topic alerta/alarma');
+            });
+        });
+
+        client.on('message', function (topic, message) {
+            const messageContent = message.toString();
+            if (topic === 'estado/alarma') {
+                updateAlarmButton(messageContent);
+            } else if (topic === 'alerta/alarma') {
+                handleAlert(messageContent);
+            }
+        });
+
+     function updateAlarmButton(alarmState) {
+    const buttonContainer = document.getElementById('alarmButtonContainer');
+    const alarmImage = document.getElementById('alarmImage');
+    const statusText = document.getElementById('statusText');
+
+    if (alarmState === '1') {
+        buttonContainer.classList.add('active');
+        buttonContainer.classList.remove('alert');
+        alarmImage.src = 'Button/blanco.png';
+        statusText.textContent = 'Activada';
+        buttonContainer.style.backgroundImage = "none";
+
+        
+    } else if (alarmState === '0') {
+        buttonContainer.classList.remove('active');
+        buttonContainer.classList.remove('alert');
+        alarmImage.src = 'Button/off.png';
+        statusText.textContent = 'Desactivada';
+        buttonContainer.style.backgroundImage = "none";
+
+        
+    }
+}
+
+
+function handleAlert(alertState) {
+    const buttonContainer = document.getElementById('alarmButtonContainer');
+    const statusText = document.getElementById('statusText');
+    const body = document.body; // Obtener el cuerpo del documento
+    const title = document.querySelector('h1'); // Seleccionar el elemento <h1>
+
+    if (alertState === '1') {
+        buttonContainer.classList.remove('active');
+        buttonContainer.classList.add('alert');
+        alarmImage.src = 'Button/Alert.png';
+        statusText.textContent = '¡Alerta alarma Encendida!';
+        statusText.style.textShadow = '0 0 10px red';
+
+        // Cambiar el color del h1 a rojo
+        title.style.color = 'red';
+
+        // Cambiar la imagen de fondo del contenedor solo durante la alerta
+        buttonContainer.style.backgroundImage = "url('GIF/d0104f4acab3baba34b669fefb101672.gif')"; //ezgif.com
+        // Cambiar el fondo del body a negro
+        body.style.backgroundColor = '#000000';
+    } else if (alertState === '0') {
+        statusText.style.textShadow = 'none';
+
+        // Volver a la imagen que indica el estado actual de la alarma
+        const currentAlarmState = document.getElementById('statusText').textContent === 'Activada' ? '1' : '0';
+        updateAlarmButton(currentAlarmState); // Actualiza a la imagen correcta según el estado
+
+        // Restablecer el color del h1 a su valor original
+        title.style.color = '#1989a8';
+    }
+}
+
+
+
+        function toggleAlarm() {
+            const statusText = document.getElementById('statusText');
+            const currentState = statusText.textContent === 'Desactivada' ? '0' : '1';
+            const newAlarmState = currentState === '0' ? '1' : '0';
+
+            statusText.textContent = newAlarmState === '1' ? 'Activando' : 'Desactivando';
+
+            client.publish('boton/alarma', newAlarmState, { qos: 1 }, function (err) {
+                if (!err) console.log(`Estado de alarma publicado: ${newAlarmState}`);
+                setTimeout(function () {
+                    console.log("Delay completado.");
+                }, 2000);
+            });
+        }
+    </script>
+
+</body>
+</html>
