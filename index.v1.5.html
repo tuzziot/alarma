@@ -95,6 +95,14 @@
         .status-text {
             font-size: 1em;
             top: 450px; /* Cambia este valor para bajar el texto */
+            color: #1989a8;
+            position: absolute; /* Esto permite la superposición */
+            z-index: 1; /* Asegura que el texto esté por encima */
+            font-weight: bold;
+        }
+        .status-text2 {
+            font-size: 1em;
+            top: 475px; /* Cambia este valor para bajar el texto */
 
             position: absolute; /* Esto permite la superposición */
             z-index: 1; /* Asegura que el texto esté por encima */
@@ -123,10 +131,12 @@
             </button>
         </div>
     </div>
+
+
     <p><br></p>
-    
     <p><br></p>
-    <p class="status-text" id="statusText">Desactivada</p>
+    <p class="status-text" id="statusText">Analizando estado de Alarma</p>
+    <p class="status-text2" id="statusText2"></p>
 
     <script>
         // Mostrar el nombre de usuario desde localStorage
@@ -136,7 +146,7 @@
         }
 
         // Conectar al broker MQTT con autenticación
-        const client = mqtt.connect('ws://mqttsas2024.ddns.net:9001');
+        const client = mqtt.connect('ws://tuzziot.ddns.net:1884');
 
         client.on('connect', function () {
             console.log('Conectado al broker MQTT');
@@ -216,20 +226,27 @@ function handleAlert(alertState) {
 
 
 
-        function toggleAlarm() {
-            const statusText = document.getElementById('statusText');
-            const currentState = statusText.textContent === 'Desactivada' ? '0' : '1';
-            const newAlarmState = currentState === '0' ? '1' : '0';
+function toggleAlarm() {
+    const statusText = document.getElementById('statusText');
+    const statusText2 = document.getElementById('statusText2');
+    const currentState = statusText.textContent === 'Desactivada' ? '0' : '1';
+    const newAlarmState = currentState === '0' ? '1' : '0';
 
-            statusText.textContent = newAlarmState === '1' ? 'Activando' : 'Desactivando';
+    // Mostrar "Activando..." o "Desactivando..." en statusText2
+    statusText2.textContent = newAlarmState === '1' ? 'Activando Alarma' : 'Desactivando Alarma';
 
-            client.publish('boton/alarma', newAlarmState, { qos: 1 }, function (err) {
-                if (!err) console.log(`Estado de alarma publicado: ${newAlarmState}`);
-                setTimeout(function () {
-                    console.log("Delay completado.");
-                }, 2000);
-            });
+    // Publicar el nuevo estado de la alarma en MQTT
+    client.publish('boton/alarma', newAlarmState, { qos: 1 }, function (err) {
+        if (!err) {
+            console.log(`Estado de alarma publicado: ${newAlarmState}`);
+            
+            // Después de 5 segundos, borrar statusText2
+            setTimeout(() => {
+                statusText2.textContent = '';
+            }, 5000);
         }
+    });
+}
     </script>
 
 </body>
